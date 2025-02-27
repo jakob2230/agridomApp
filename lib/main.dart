@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'maindash.dart';
+import 'main_dash.dart';
+import 'api_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,27 +32,95 @@ class EmployeeLoginPage extends StatefulWidget {
 class _EmployeeLoginPageState extends State<EmployeeLoginPage> {
   final TextEditingController employeeIdController = TextEditingController();
   final TextEditingController pinController = TextEditingController();
+  final TextEditingController newPinController = TextEditingController();
+  final ApiService _apiService = ApiService();
+  bool isFirstLogin = false;
 
   Future<void> attemptLogin() async {
     String employeeId = employeeIdController.text;
     String pin = pinController.text;
 
-    var response = await http.post(
-      Uri.parse("http://127.0.0.1:8000/api/login/"),
-      headers: {"Content-Type": "application/json"},
-      body: json.encode({"employee_id": employeeId, "pin": pin}),
-    );
+    if (isFirstLogin && newPinController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Please enter a new PIN")),
+      );
+      return;
+    }
 
-    var data = json.decode(response.body);
+    // For first login, we need to set a new PIN
+    if (isFirstLogin) {
+      var response = await _apiService.clockIn(
+        employeeId,
+        pin,
+        {}, // Empty location
+        null, // No image
+        newPin: newPinController.text, // Pass the new PIN value
+      );
 
-    if (data["success"]) {
+      if (response["success"]) {
+        // Store user info for later
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('employee_id', employeeId);
+        await prefs.setString('pin', newPinController.text);
+        await prefs.setString('name', response["name"] ?? "");
+
+        // Navigate to main dashboard
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => MainDash(
+            employeeId: employeeId,
+            pin: newPinController.text,
+          )),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(response["error"] ?? "Login failed")),
+        );
+      }
+      return;
+    }
+
+    // Regular login
+    var response = await _apiService.login(employeeId, pin);
+
+    if (response["success"]) {
+      // Store user info for later
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('employee_id', employeeId);
+      await prefs.setString('pin', pin);
+      await prefs.setString('name', response["name"] ?? "");
+
+      // Navigate to main dashboard
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => MainDash()),
+        MaterialPageRoute(builder: (context) => MainDash(
+          employeeId: employeeId,
+          pin: pin,
+        )),
       );
+    } else if (response["error"] == "first_login") {
+      // Show UI for first login
+      setState(() {
+        isFirstLogin = true;
+      });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(data["message"])),
+        SnackBar(content: Text(response["message"] ?? "Login failed")),
+      );
+    }
+  }
+
+  void _testApiConnection() async {
+    try {
+      final response = await http.get(Uri.parse("http://10.0.2.2:8000/api/test/"));
+      print("API Test Response: ${response.body}");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("API Connection: ${response.statusCode == 200 ? 'Success' : 'Failed'}")),
+      );
+    } catch (e) {
+      print("API Test Error: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("API Connection Error: $e")),
       );
     }
   }
@@ -59,6 +129,7 @@ class _EmployeeLoginPageState extends State<EmployeeLoginPage> {
   void dispose() {
     employeeIdController.dispose();
     pinController.dispose();
+    newPinController.dispose();
     super.dispose();
   }
 
@@ -89,6 +160,22 @@ class _EmployeeLoginPageState extends State<EmployeeLoginPage> {
                   border: OutlineInputBorder(),
                 ),
               ),
+              if (isFirstLogin) ...[
+                const SizedBox(height: 10),
+                TextField(
+                  controller: newPinController,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: 'New PIN (required for first login)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  "First login detected. Please set a new PIN.",
+                  style: TextStyle(color: Colors.red),
+                ),
+              ],
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: attemptLogin,
@@ -96,7 +183,10 @@ class _EmployeeLoginPageState extends State<EmployeeLoginPage> {
                   backgroundColor: Colors.red,
                   padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
                 ),
-                child: const Text('Login', style: TextStyle(color: Colors.white)),
+                child: Text(
+                  isFirstLogin ? 'Set New PIN & Login' : 'Login',
+                  style: TextStyle(color: Colors.white)
+                ),
               ),
             ],
           ),
