@@ -1,0 +1,2 @@
+C:/Users/marag/Desktop/AgridomMobile-master/android/app/.cxx/Debug/2b1h4038/x86/CMakeFiles/edit_cache.dir
+C:/Users/marag/Desktop/AgridomMobile-master/android/app/.cxx/Debug/2b1h4038/x86/CMakeFiles/rebuild_cache.dir
