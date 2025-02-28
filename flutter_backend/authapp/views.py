@@ -1,4 +1,3 @@
-
 import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -15,6 +14,7 @@ def login_view(request):
         except json.JSONDecodeError:
             return JsonResponse({"success": False, "message": "Invalid JSON"})
 
+        # Retrieve credentials from the request body
         employee_id = data.get("username")
         pin = data.get("password")
 
@@ -24,9 +24,10 @@ def login_view(request):
             if not user.is_active:
                 return JsonResponse({"success": False, "message": "This account is inactive"})
 
-            # Try to authenticate using the provided pin
+            # Try to authenticate using the provided PIN
             auth_result = CustomerUser.authenticate_by_pin(employee_id, pin)
             if auth_result:
+                # If authenticate_by_pin returns a CustomerUser or a dict containing the user
                 user = auth_result if isinstance(auth_result, CustomerUser) else auth_result["user"]
                 login(request, user)  # Establish the session if needed
 
@@ -42,4 +43,3 @@ def login_view(request):
             return JsonResponse({"success": False, "message": "Employee ID not found"})
     else:
         return JsonResponse({"success": False, "message": "Only POST requests are allowed"})
-

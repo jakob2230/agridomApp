@@ -31,24 +31,38 @@ class _EmployeeLoginPageState extends State<EmployeeLoginPage> {
   final TextEditingController employeeIdController = TextEditingController();
   final TextEditingController pinController = TextEditingController();
 
-  Future<void> attemptLogin() async {
-    String employeeId = employeeIdController.text;
-    String pin = pinController.text;
+Future<void> attemptLogin() async {
+  print("Attempting login with employeeId: ${employeeIdController.text} and pin: ${pinController.text}");
 
-    var response = await http.post(
-      Uri.parse("http://127.0.0.1:8000/api/login/"),
-      headers: {"Content-Type": "application/json"},
-      body: json.encode({"employee_id": employeeId, "pin": pin}),
-    );
+  var response = await http.post(
+    Uri.parse("http://10.0.2.2:8000/api/login/"),
+    headers: {"Content-Type": "application/json"},
+    body: json.encode({"username": employeeIdController.text, "password": pinController.text}),
+  );
+
+    print("Response status: ${response.statusCode}");
+    print("Response body: ${response.body}");
 
     var data = json.decode(response.body);
+    print("Decoded JSON: $data");
 
     if (data["success"]) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => MainDash()),
-      );
+      print("Login successful. Received data: $data");
+      // Check for the redirect field value if needed; update the string if your Django view sends a different one.
+      if (data["redirect"] == "maindash") {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => MainDash()),
+        );
+      } else {
+        // Fallback: navigate to MainDash regardless
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => MainDash()),
+        );
+      }
     } else {
+      print("Login failed: ${data["message"]}");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(data["message"])),
       );
@@ -91,7 +105,10 @@ class _EmployeeLoginPageState extends State<EmployeeLoginPage> {
               ),
               const SizedBox(height: 20),
               ElevatedButton(
-                onPressed: attemptLogin,
+                onPressed: () {
+                print("Button pressed!");
+                attemptLogin();
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red,
                   padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
