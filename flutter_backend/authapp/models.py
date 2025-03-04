@@ -37,6 +37,7 @@ class CustomerUser(models.Model):
     is_guard = models.BooleanField(default=False)
     if_first_login = models.BooleanField(default=True)
     is_active = models.BooleanField(default=True)
+    last_login = models.DateTimeField(null=True, blank=True)
 
     
 

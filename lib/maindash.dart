@@ -6,10 +6,10 @@ import 'dart:io'; // Needed for displaying image files
 import 'package:mobileapp/time_in_handler.dart';
 
 class MainDash extends StatefulWidget {
-  const MainDash({super.key});
+  const MainDash({Key? key}) : super(key: key);
 
   @override
-  State<MainDash> createState() => _MainDashState();
+  _MainDashState createState() => _MainDashState();
 }
 
 class _MainDashState extends State<MainDash> {
@@ -81,7 +81,7 @@ class _MainDashState extends State<MainDash> {
               decoration: const BoxDecoration(
                 color: Colors.red,
               ),
-              child: const Text("Welcome!",
+              child: const Text("hello!",
                   style: TextStyle(color: Colors.white, fontSize: 24)),
             ),
             ListTile(
