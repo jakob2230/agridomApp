@@ -16,6 +16,18 @@ class _FileLeaveScreenState extends State<FileLeaveScreen> {
   DateTime? endDate;
   int leaveDays = 0;
 
+  final TextEditingController _startDateController = TextEditingController();
+  final TextEditingController _endDateController = TextEditingController();
+  final TextEditingController _reasonController = TextEditingController();
+
+  @override
+  void dispose() {
+    _startDateController.dispose();
+    _endDateController.dispose();
+    _reasonController.dispose();
+    super.dispose();
+  }
+
   // Function to select a date
   Future<void> _selectDate(BuildContext context, bool isStartDate) async {
     final DateTime? picked = await showDatePicker(
@@ -29,8 +41,10 @@ class _FileLeaveScreenState extends State<FileLeaveScreen> {
       setState(() {
         if (isStartDate) {
           startDate = picked;
+          _startDateController.text = DateFormat.yMMMd().format(picked);
           if (endDate != null && endDate!.isBefore(startDate!)) {
-            endDate = null; // Reset end date if it’s before start date
+            endDate = null;
+            _endDateController.text = "";
           }
         } else {
           if (startDate == null) {
@@ -46,6 +60,7 @@ class _FileLeaveScreenState extends State<FileLeaveScreen> {
             return;
           }
           endDate = picked;
+          _endDateController.text = DateFormat.yMMMd().format(picked);
         }
 
         // Calculate leave duration
@@ -76,7 +91,7 @@ class _FileLeaveScreenState extends State<FileLeaveScreen> {
             Center(
               child: Column(
                 children: [
-                  Image.asset('images/SFgroup.png', height: 75), // Your logo here
+                  Image.asset('images/SFgroup.png', height: 75),
                   SizedBox(height: 10),
                   Text(
                     "Number of leave left: $remainingLeave/$totalLeaveCredits",
@@ -86,10 +101,9 @@ class _FileLeaveScreenState extends State<FileLeaveScreen> {
               ),
             ),
             SizedBox(height: 20),
-
             // Leave Type Dropdown
             Text("Select Leave Type:", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            SizedBox(height: 5), // Reduced spacing
+            SizedBox(height: 5),
             DropdownButtonFormField<String>(
               value: selectedLeaveType,
               items: ["Sick Leave", "Vacation Leave", "Emergency Leave"]
@@ -105,16 +119,13 @@ class _FileLeaveScreenState extends State<FileLeaveScreen> {
                 hintText: "Choose Leave Type",
               ),
             ),
-            SizedBox(height: 15), // Reduced spacing
-
+            SizedBox(height: 15),
             // Leave Start Date
             Text("Leave Start Date:", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            SizedBox(height: 5), // Reduced spacing
+            SizedBox(height: 5),
             TextField(
               readOnly: true,
-              controller: TextEditingController(
-                text: startDate != null ? DateFormat.yMMMd().format(startDate!) : "",
-              ),
+              controller: _startDateController,
               decoration: InputDecoration(
                 border: OutlineInputBorder(),
                 hintText: "Select Start Date",
@@ -124,16 +135,13 @@ class _FileLeaveScreenState extends State<FileLeaveScreen> {
                 ),
               ),
             ),
-            SizedBox(height: 15), // Reduced spacing
-
+            SizedBox(height: 15),
             // Leave End Date
             Text("Leave End Date:", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            SizedBox(height: 5), // Reduced spacing
+            SizedBox(height: 5),
             TextField(
               readOnly: true,
-              controller: TextEditingController(
-                text: endDate != null ? DateFormat.yMMMd().format(endDate!) : "",
-              ),
+              controller: _endDateController,
               decoration: InputDecoration(
                 border: OutlineInputBorder(),
                 hintText: "Select End Date",
@@ -143,8 +151,7 @@ class _FileLeaveScreenState extends State<FileLeaveScreen> {
                 ),
               ),
             ),
-            SizedBox(height: 10), // Reduced spacing
-
+            SizedBox(height: 10),
             // Display Number of Leave Days
             if (leaveDays > 0)
               Center(
@@ -153,20 +160,19 @@ class _FileLeaveScreenState extends State<FileLeaveScreen> {
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blue),
                 ),
               ),
-            SizedBox(height: 5), // Reduced spacing
-
+            SizedBox(height: 5),
             // Reason Text Field
             Text("Reason:", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            SizedBox(height: 5), // Reduced spacing
+            SizedBox(height: 5),
             TextField(
+              controller: _reasonController,
               maxLines: 3,
               decoration: InputDecoration(
                 border: OutlineInputBorder(),
                 hintText: "Enter your reason for leave",
               ),
             ),
-            SizedBox(height: 15), // Reduced spacing
-
+            SizedBox(height: 15),
             // Submit Button
             Center(
               child: ElevatedButton(
@@ -178,13 +184,12 @@ class _FileLeaveScreenState extends State<FileLeaveScreen> {
                   if (selectedLeaveType != null && startDate != null && endDate != null) {
                     if (remainingLeave >= leaveDays) {
                       setState(() {
-                        remainingLeave -= leaveDays; // Deduct based on leave duration
+                        remainingLeave -= leaveDays;
                       });
-
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text('Leave request submitted successfully!')),
                       );
-                      Navigator.pop(context); // Close after submitting
+                      Navigator.pop(context);
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text('Insufficient leave balance!')),
