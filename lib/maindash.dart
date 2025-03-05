@@ -49,27 +49,56 @@ class _MainDashState extends State<MainDash> {
   }
 
   Future<void> handleTimeIn() async {
-    String capturedImagePath = await timeInHandler.captureTimeIn();
-    String timeIn = DateFormat('hh:mm:ss a').format(DateTime.now());
-    setState(() {
-      attendanceList.add({
-        "name": "Employee ${attendanceList.length + 1}",
-        "time_in": timeIn,
-        "time_out": "Not Yet Out",
-        "image": capturedImagePath,
-      });
-    });
+  // Check if user already has an entry for today
+  final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+  bool hasEntryToday = attendanceList.any((entry) {
+    String entryTimeIn = entry["time_in"] ?? "";
+    return entry["name"] == widget.fullName && 
+           entryTimeIn.isNotEmpty && 
+           entryTimeIn.contains(today);
+  });
+
+  if (hasEntryToday) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("You have already timed in for today")),
+    );
+    return;
   }
 
-  void handleTimeOut() {
-    if (attendanceList.isNotEmpty) {
-      setState(() {
-        int index = attendanceList.length - 1;
-        attendanceList[index]["time_out"] =
-            DateFormat('hh:mm:ss a').format(DateTime.now());
-      });
-    }
+  String capturedImagePath = await timeInHandler.captureTimeIn();
+  String timeIn = DateFormat('yyyy-MM-dd hh:mm:ss a').format(DateTime.now());
+  setState(() {
+    attendanceList.add({
+      "name": widget.fullName,
+      "time_in": timeIn,
+      "time_out": "Not Yet Out",
+      "image": capturedImagePath,
+    });
+  });
+}
+
+void handleTimeOut() {
+  // Find today's entry that hasn't been timed out yet
+  final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+  int entryIndex = attendanceList.indexWhere((entry) {
+    String entryTimeIn = entry["time_in"] ?? "";
+    return entry["name"] == widget.fullName && 
+           entry["time_out"] == "Not Yet Out" &&
+           entryTimeIn.contains(today);
+  });
+
+  if (entryIndex == -1) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("You haven't timed in today or have already timed out")),
+    );
+    return;
   }
+
+  setState(() {
+    attendanceList[entryIndex]["time_out"] = 
+        DateFormat('yyyy-MM-dd hh:mm:ss a').format(DateTime.now());
+  });
+}
 
   @override
   Widget build(BuildContext context) {
@@ -199,10 +228,10 @@ class _MainDashState extends State<MainDash> {
                         label: Text('Name', style: TextStyle(fontWeight: FontWeight.bold)),
                       ),
                       DataColumn(
-                        label: Text('Time IN', style: TextStyle(fontWeight: FontWeight.bold)),
+                        label: Text('Time In', style: TextStyle(fontWeight: FontWeight.bold)),
                       ),
                       DataColumn(
-                        label: Text('Time OUT', style: TextStyle(fontWeight: FontWeight.bold)),
+                        label: Text('Time Out', style: TextStyle(fontWeight: FontWeight.bold)),
                       ),
                     ],
                     rows: List.generate(
