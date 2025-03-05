@@ -35,11 +35,13 @@ def login_view(request):
             user = auth_result if isinstance(auth_result, CustomerUser) else auth_result["user"]
             login(request, user)  # Establish the session if needed
 
-            # Return a JSON response with a redirect indicator for your Flutter app
+            # Return a JSON response with the user's name included
             return JsonResponse({
                 "success": True,
                 "message": "Login successful",
-                "redirect": "maindash"
+                "redirect": "maindash",
+                "first_name": user.first_name,
+                "surname": user.surname,
             })
         else:
             return JsonResponse({"success": False, "message": "Incorrect PIN"})

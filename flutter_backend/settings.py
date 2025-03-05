@@ -15,7 +15,7 @@ SECRET_KEY = 'django-insecure-your-secret-key-here'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []  # Adjust as needed
+ALLOWED_HOSTS = ["*"]  # Adjust as needed
 
 # Application definition
 INSTALLED_APPS = [
@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'flutter_backend.authapp',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [

@@ -15,7 +15,12 @@ class EmployeeLoginApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: EmployeeLoginPage(),
+      // Define the initial route and available routes
+      initialRoute: '/',
+      routes: {
+        '/': (context) => EmployeeLoginPage(),
+        '/maindash': (context) => MainDash(fullName: ''),
+      },
     );
   }
 }
@@ -35,7 +40,7 @@ Future<void> attemptLogin() async {
   try {
     print("Attempting login with employeeId: ${employeeIdController.text} and pin: ${pinController.text}");
     var response = await http.post(
-      Uri.parse("http://10.0.2.2:8000/api/login/"),
+      Uri.parse("http://127.0.0.1:8000/api/login/"),
       headers: {"Content-Type": "application/json"},
       body: json.encode({
         "username": employeeIdController.text,
@@ -49,21 +54,22 @@ Future<void> attemptLogin() async {
     if (response.statusCode == 200) {
       var data = json.decode(response.body);
       if (data["success"]) {
-        print("Login successful. Received data: $data");
+        // Extract first name and surname from the response.
+        // Make sure your Django response includes these keys.
+        String fullName = "${data["first_name"]} ${data["surname"]}";
+        
+        // Navigate to MainDash with the user's full name.
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => MainDash()),
+          MaterialPageRoute(builder: (context) => MainDash(fullName: fullName)),
         );
       } else {
+        // Handle login failure...
         print("Login failed: ${data["message"]}");
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(data["message"])),
         );
       }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Server error: ${response.statusCode}")),
-      );
     }
   } catch (e) {
     print("Login exception: $e");

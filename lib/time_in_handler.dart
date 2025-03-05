@@ -1,35 +1,34 @@
+// time_in_handler.dart
 import 'package:camera/camera.dart';
 import 'package:intl/intl.dart';
 
 class TimeInHandler {
-  CameraController? _cameraController;
+  CameraController? cameraController;
   List<CameraDescription>? cameras;
 
   Future<void> initializeCamera() async {
     cameras = await availableCameras();
     if (cameras != null && cameras!.isNotEmpty) {
-      _cameraController = CameraController(cameras![0], ResolutionPreset.medium);
-      await _cameraController!.initialize();
+      cameraController = CameraController(cameras![0], ResolutionPreset.medium);
+      await cameraController!.initialize();
     }
   }
 
-  Future<Map<String, String>> captureTimeIn() async {
-    String timeIn = DateFormat('hh:mm:ss a').format(DateTime.now());
+  // Return captured image file path as a String
+  Future<String> captureTimeIn() async {
     String imagePath = "";
-
-    if (_cameraController != null && _cameraController!.value.isInitialized) {
+    if (cameraController != null && cameraController!.value.isInitialized) {
       try {
-        final XFile file = await _cameraController!.takePicture();
-        imagePath = file.path; // Save the image path
+        final XFile file = await cameraController!.takePicture();
+        imagePath = file.path;
       } catch (e) {
         print("Error taking picture: $e");
       }
     }
-
-    return {"time": timeIn, "image": imagePath};
+    return imagePath;
   }
   
-  void dispose() {
-    _cameraController?.dispose();
+  void disposeCamera() {
+    cameraController?.dispose();
   }
 }

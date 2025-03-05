@@ -1,21 +1,24 @@
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'dart:async';
-import 'dart:io'; // Needed for displaying image files
 
-import 'package:mobileapp/time_in_handler.dart';
+import 'file_leave_screen.dart';
+import 'time_in_handler.dart';
+import 'drawer_widget.dart';
 
 class MainDash extends StatefulWidget {
-  const MainDash({Key? key}) : super(key: key);
+  final String fullName; // New parameter for user's full name
+
+  const MainDash({Key? key, required this.fullName}) : super(key: key);
 
   @override
-  _MainDashState createState() => _MainDashState();
+  State<MainDash> createState() => _MainDashState();
 }
 
 class _MainDashState extends State<MainDash> {
   TimeInHandler timeInHandler = TimeInHandler();
   List<Map<String, String>> attendanceList = [];
-  
   String currentTime = "";
   String currentDate = "";
   Timer? timer;
@@ -35,7 +38,7 @@ class _MainDashState extends State<MainDash> {
   }
 
   void updateTime() {
-    timer = Timer.periodic(Duration(seconds: 1), (Timer t) {
+    timer = Timer.periodic(const Duration(seconds: 1), (Timer t) {
       if (mounted) {
         setState(() {
           currentTime = DateFormat('hh : mm : ss a').format(DateTime.now());
@@ -46,13 +49,14 @@ class _MainDashState extends State<MainDash> {
   }
 
   Future<void> handleTimeIn() async {
-    Map<String, String> entry = await timeInHandler.captureTimeIn();
+    String capturedImagePath = await timeInHandler.captureTimeIn();
+    String timeIn = DateFormat('hh:mm:ss a').format(DateTime.now());
     setState(() {
       attendanceList.add({
         "name": "Employee ${attendanceList.length + 1}",
-        "time_in": entry["time"]!,
+        "time_in": timeIn,
         "time_out": "Not Yet Out",
-        "image": entry["image"]!
+        "image": capturedImagePath,
       });
     });
   }
@@ -61,7 +65,8 @@ class _MainDashState extends State<MainDash> {
     if (attendanceList.isNotEmpty) {
       setState(() {
         int index = attendanceList.length - 1;
-        attendanceList[index]["time_out"] = DateFormat('hh:mm:ss a').format(DateTime.now());
+        attendanceList[index]["time_out"] =
+            DateFormat('hh:mm:ss a').format(DateTime.now());
       });
     }
   }
@@ -70,71 +75,148 @@ class _MainDashState extends State<MainDash> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Main Dashboard"),
-        backgroundColor: Colors.red,
-      ),
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            DrawerHeader(
-              decoration: const BoxDecoration(
-                color: Colors.red,
-              ),
-              child: const Text("hello!",
-                  style: TextStyle(color: Colors.white, fontSize: 24)),
-            ),
-            ListTile(
-              leading: const Icon(Icons.logout),
-              title: const Text("Logout"),
-              onTap: () {
-                // Implement logout logic if needed
-                Navigator.pop(context);
-              },
-            ),
-          ],
+        backgroundColor: Colors.white,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.black),
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu, color: Colors.black),
+            onPressed: () {
+              Scaffold.of(context).openDrawer();
+            },
+          ),
+        ),
+        centerTitle: true,
+        title: Image.asset(
+          'images/SFgroup.png',
+          height: 60,
+          fit: BoxFit.contain,
         ),
       ),
+      // Pass the user's full name to the AppDrawer here:
+      drawer: AppDrawer(fullName: widget.fullName),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(20.0),
         child: Column(
           children: [
-            Text("Current Time: $currentTime", style: const TextStyle(fontSize: 20)),
-            Text("Current Date: $currentDate", style: const TextStyle(fontSize: 16)),
             const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: handleTimeIn,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+            // Live Camera Preview
+            Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: const Color(0xFFF44336), width: 3),
+                borderRadius: BorderRadius.circular(8),
               ),
-              child: const Text("Time In", style: TextStyle(color: Colors.white)),
-            ),
-            const SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: handleTimeOut,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+              child: SizedBox(
+                height: 200,
+                width: 300,
+                child: (timeInHandler.cameraController != null &&
+                        timeInHandler.cameraController!.value.isInitialized)
+                    ? CameraPreview(timeInHandler.cameraController!)
+                    : Container(color: Colors.grey),
               ),
-              child: const Text("Time Out", style: TextStyle(color: Colors.white)),
             ),
             const SizedBox(height: 20),
+            // Current Time & Date
+            Text(
+              currentTime,
+              style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              currentDate,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 20),
+            // Action Buttons: Time In, Time Out, File Leave
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: handleTimeIn,
+                  child: const Text('Time In', style: TextStyle(color: Colors.white)),
+                ),
+                const SizedBox(width: 10),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: handleTimeOut,
+                  child: const Text('Time Out', style: TextStyle(color: Colors.white)),
+                ),
+                const SizedBox(width: 10),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const FileLeaveScreen()),
+                    );
+                  },
+                  child: const Text('File Leave', style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            // Attendance List Header
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: const BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(8), topRight: Radius.circular(8)),
+              ),
+              child: const Center(
+                child: Text(
+                  'Attendance List',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+              ),
+            ),
+            // Attendance List Table wrapped in scroll views
             Expanded(
-              child: ListView.builder(
-                itemCount: attendanceList.length,
-                itemBuilder: (context, index) {
-                  final item = attendanceList[index];
-                  return Card(
-                    child: ListTile(
-                      title: Text(item["name"] ?? "Employee"),
-                      subtitle: Text("In: ${item["time_in"]}\nOut: ${item["time_out"]}"),
-                      leading: item["image"]!.isNotEmpty
-                          ? Image.file(File(item["image"]!), width: 50, height: 50, fit: BoxFit.cover)
-                          : null,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.vertical,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: DataTable(
+                    columnSpacing: 20,
+                    columns: const [
+                      DataColumn(
+                        label: Text('Name', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                      DataColumn(
+                        label: Text('Time IN', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                      DataColumn(
+                        label: Text('Time OUT', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                    rows: List.generate(
+                      attendanceList.length,
+                      (index) => DataRow(
+                        cells: [
+                          DataCell(Text(attendanceList[index]['name']!)),
+                          DataCell(Text(attendanceList[index]['time_in']!)),
+                          DataCell(Text(attendanceList[index]['time_out']!)),
+                        ],
+                      ),
                     ),
-                  );
-                },
+                  ),
+                ),
               ),
             ),
           ],
@@ -146,7 +228,7 @@ class _MainDashState extends State<MainDash> {
   @override
   void dispose() {
     timer?.cancel();
-    timeInHandler.dispose();
+    timeInHandler.disposeCamera();
     super.dispose();
   }
 }
